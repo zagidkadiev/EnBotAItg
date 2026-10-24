@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Анна — AI Voice English Tutor</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #08090e;
+            --surface: rgba(255, 255, 255, 0.045);
+            --surface-hover: rgba(255, 255, 255, 0.085);
+            --border: rgba(255, 255, 255, 0.09);
+            --text: #f4f4f6;
+            --muted: #8e929f;
+            --accent: #ec4899;
+            --violet: #8b5cf6;
+            --cyan: #06b6d4;
+            --green: #34d399;
+            --amber: #fbbf24;
+            --orange: #fb923c;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 12px 16px 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            background: radial-gradient(circle at 50% 32%, #19152c 0%, #0b0c14 58%, var(--bg) 100%);
+            color: var(--text);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 1. ВЕРХНЯЯ ПАНЕЛЬ (TOP BAR) */
+        .top-bar {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            z-index: 20;
+        }
+        .brand-cluster {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
+            flex-shrink: 0;
+        }
+        .brand-name {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .level-pill {
+            background: rgba(139, 92, 246, 0.16);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            color: #ddd6fe;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .level-pill:hover {
+            background: rgba(139, 92, 246, 0.28);
+        }
+        .stealth-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .stealth-pill.active {
+            background: rgba(52, 211, 153, 0.14);
+            border-color: rgba(52, 211, 153, 0.4);
+            color: var(--green);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pill-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: #e4e4e7;
+            padding: 6px 11px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .pill-btn:hover { background: var(--surface-hover); }
+        .pill-btn:active { transform: scale(0.96); }
+
+        /* 2. КОМПАКТНАЯ ПОЛОСКА РОЛЕВОГО КВЕСТА (ROLEPLAY BAR) */
+        .quest-bar {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 6px 11px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            z-index: 15;
+        }
+        .quest-title {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #c4b5fd;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .quest-steps {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .quest-steps::-webkit-scrollbar { display: none; }
+        .q-step {
+            font-size: 10.5px;
+            padding: 2px 8px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--muted);
+            white-space: nowrap;
+            border: 1px solid transparent;
+            transition: all 0.25s;
+        }
+        .q-step.done {
+            background: rgba(52, 211, 153, 0.14);
+            color: var(--green);
+            border-color: rgba(52, 211, 153, 0.35);
+        }
+
+        /* 3. ЦЕНТРАЛЬНАЯ СЦЕНА С ЖИВЫМ КРУЖКОМ (EMOTIONAL ORB) */
+        .center-stage {
+            flex: 1;
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 170px;
+        }
+        .orb-container {
+            position: relative;
+            width: 156px;
+            height: 156px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .orb-ring-outer {
+            position: absolute;
+            width: 152px;
+            height: 152px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.35s ease;
+            pointer-events: none;
+        }
+        .orb-ring-inner {
+            position: absolute;
+            width: 134px;
+            height: 134px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.13);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .orb-core {
+            width: 112px;
+            height: 112px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #ec4899 55%, #a855f7 100%);
+            box-shadow: 0 0 45px rgba(236, 72, 153, 0.32), inset 0 0 24px rgba(255, 255, 255, 0.32);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: orbBreathe 4.2s ease-in-out infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        }
+        .orb-core span.orb-icon {
+            font-size: 22px;
+            margin-bottom: 2px;
+        }
+
+        /* Состояние: Слушает английский (Listening EN) */
+        .orb-container.listening .orb-core {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 60%, #10b981 100%);
+            box-shadow: 0 0 65px rgba(6, 182, 212, 0.68), inset 0 0 30px rgba(255, 255, 255, 0.5);
+            animation: orbListenWave 1.15s ease-in-out infinite;
+        }
+        .orb-container.listening .orb-ring-inner {
+            width: 162px;
+            height: 162px;
+            border-color: rgba(6, 182, 212, 0.5);
+            animation: ringRipple 1.4s infinite;
+        }
+        .orb-container.listening .orb-ring-outer {
+            width: 184px;
+            height: 184px;
+            border-color: rgba(6, 182, 212, 0.22);
+        }
+
+        /* Состояние: Слушает вопрос на русском (Listening RU) */
+        .orb-container.listening-ru .orb-core {
+            background: linear-gradient(135deg, #f59e0b 0%, #ec4899 100%);
+            box-shadow: 0 0 65px rgba(245, 158, 11, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.5);
+            animation: orbListenWave 1.15s ease-in-out infinite;
+        }
+
+        /* Состояние: Проверка произношения (Pronunciation Check) */
+        .orb-container.pronounce .orb-core {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 0 65px rgba(16, 185, 129, 0.65), inset 0 0 28px rgba(255, 255, 255, 0.45);
+            animation: orbListenWave 1.1s ease-in-out infinite;
+        }
+
+        /* Состояние: Думает (Thinking) */
+        .orb-container.thinking .orb-core {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            box-shadow: 0 0 50px rgba(139, 92, 246, 0.55);
+            animation: orbThinkPulse 0.85s ease-in-out infinite alternate;
+        }
+
+        /* Состояние: Анна говорит (Speaking) */
+        .orb-container.speaking .orb-core {
+            background: linear-gradient(135deg, #ec4899 0%, #a855f7 60%, #6366f1 100%);
+            box-shadow: 0 0 70px rgba(236, 72, 153, 0.7), inset 0 0 32px rgba(255, 255, 255, 0.5);
+            animation: orbSpeakMorph 0.72s ease-in-out infinite alternate;
+        }
+        .orb-container.speaking .orb-ring-inner {
+            width: 164px;
+            height: 164px;
+            border-color: rgba(236, 72, 153, 0.45);
+            animation: ringRipple 1.15s infinite;
+        }
+
+        @keyframes orbBreathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.055); }
+        }
+        @keyframes orbListenWave {
+            0%, 100% { transform: scale(1.03); border-radius: 50%; }
+            50% { transform: scale(1.14); border-radius: 46% 54% 49% 51%; }
+        }
+        @keyframes orbThinkPulse {
+            0% { transform: scale(0.94) rotate(0deg); opacity: 0.82; }
+            100% { transform: scale(1.06) rotate(12deg); opacity: 1; }
+        }
+        @keyframes orbSpeakMorph {
+            0% { transform: scale(1.01); border-radius: 50%; }
+            100% { transform: scale(1.16); border-radius: 45% 55% 47% 53%; }
+        }
+        @keyframes ringRipple {
+            0% { transform: scale(0.94); opacity: 0.85; }
+            100% { transform: scale(1.22); opacity: 0; }
+        }
+
+        .status-line {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 430px;
+            min-height: 19px;
+            padding: 0 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .status-line.live {
+            color: #38bdf8;
+            font-weight: 500;
+        }
+
+        /* Вспомогательные кнопки под кружком (Вопрос на RU + Текстовый ввод) */
+        .sub-orb-controls {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sub-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: #d4d4d8;
+            font-size: 11.5px;
+            padding: 5px 12px;
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sub-pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .sub-pill.active-ru {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        /* Быстрая строка ввода текста */
+        .quick-input-bar {
+            width: 100%;
+            max-width: 460px;
+            margin-bottom: 6px;
+            display: none;
+            gap: 6px;
+        }
+        .quick-input-bar.show {
+            display: flex;
+        }
+        .quick-input-bar input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .quick-input-bar button {
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            border: none;
+            color: #fff;
+            padding: 0 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 4. НИЖНЯЯ СОБРАННАЯ КАПСУЛА (COMPACT BOTTOM DOCK) */
+        .bottom-dock {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(17, 19, 28, 0.86);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 12px 15px;
+            backdrop-filter: blur(18px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 20;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        }
+
+        /* Блок коррекции / Stealth Upgrade */
+        .dock-correction {
+            display: none;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            border-radius: 12px;
+            padding: 7px 10px;
+            font-size: 12px;
+            line-height: 1.35;
+            color: #fde68a;
+        }
+        .dock-correction.show {
+            display: flex;
+        }
+        .corr-text {
+            flex: 1;
+            user-select: text;
+        }
+        .corr-speak-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #fde68a;
+            border-radius: 7px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .dock-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .dock-en {
+            font-size: 15.5px;
+            font-weight: 600;
+            color: #ffffff;
+            line-height: 1.35;
+            cursor: pointer;
+            user-select: text;
+            flex: 1;
+        }
+        .dock-tools {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            color: #e4e4e7;
+            padding: 4px 8px;
+            border-radius: 9px;
+            font-size: 11.5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .tool-btn:hover { background: rgba(255, 255, 255, 0.14); }
+        .tool-btn.active {
+            background: rgba(52, 211, 153, 0.22);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .dock-sub {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .dock-tr {
+            color: #a78bfa;
+        }
+
+        /* Подсказки (Hints) */
+        .dock-hints {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-top: 3px;
+        }
+        .dock-hints::-webkit-scrollbar { display: none; }
+        .hint-chip {
+            font-size: 11px;
+            color: #d4d4d8;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 4px 10px;
+            border-radius: 99px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .hint-chip:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .word-ok { color: var(--green); }
+        .word-fix { color: var(--orange); text-decoration: underline wavy; }
+
+        /* Уведомление (Toast) */
+        .toast {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-140%);
+            background: rgba(20, 22, 32, 0.96);
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 12.5px;
+            font-weight: 600;
+            z-index: 100;
+            transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* МОДАЛЬНЫЕ ОКНА (DRAWERS: СЛОВАРЬ, НАГРАДЫ, МЕНЮ) */
+        .drawer {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 9, 14, 0.96);
+            backdrop-filter: blur(20px);
+            z-index: 60;
+            padding: 18px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+        .drawer.open { display: flex; }
+        .drawer-content {
+            width: 100%;
+            max-width: 460px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding-bottom: 24px;
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .drawer-title {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .field-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .field-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #c4b5fd;
+        }
+        .field-desc {
+            font-size: 11.5px;
+            color: var(--muted);
+        }
+        select, input[type="text"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            border: none;
+        }
+
+        /* Карточки словаря (Vocabulary Vault) */
+        .vault-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .vault-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .vault-item-en {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .vault-item-sub {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .flashcard-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(236, 72, 153, 0.16));
+            border: 1px solid rgba(236, 72, 153, 0.35);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Сетка наград */
+        .badges-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .badge-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 10px;
+            text-align: center;
+            opacity: 0.35;
+            transition: all 0.25s;
+        }
+        .badge-card.unlocked {
+            opacity: 1;
+            background: rgba(251, 191, 36, 0.08);
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast">🏆 Награда открыта!</div>
+
+    <!-- 1. ВЕРХНЯЯ ПАНЕЛЬ -->
+    <div class="top-bar">
+        <div class="brand-cluster">
+            <div class="live-dot"></div>
+            <span class="brand-name">Анна</span>
+            <button class="level-pill" id="levelPill" onclick="cycleLevel()" title="Переключить уровень сложности">A1–A2</button>
+            <button class="stealth-pill active" id="stealthPill" onclick="toggleStealth()" title="Stealth Mode: мягкая коррекция без прерывания">🕵️ Stealth</button>
+        </div>
+        <div class="nav-actions">
+            <button class="pill-btn" onclick="openDrawer('vaultDrawer')" title="Словарь и сохранённые ошибки">📚 <span id="vaultCount">0</span></button>
+            <button class="pill-btn" onclick="openDrawer('rewardsDrawer')" title="Награды и опыт">🏆 <span id="xpCount">0</span></button>
+            <button class="pill-btn" onclick="openDrawer('menuDrawer')">Меню</button>
+        </div>
+    </div>
+
+    <!-- 2. ПОЛОСКА РОЛЕВОГО СЦЕНАРИЯ (QUEST BAR) -->
+    <div class="quest-bar" id="questBar">
+        <div class="quest-title" id="questTitle" onclick="openDrawer('menuDrawer')">☕ Кофейня в Лондоне ▾</div>
+        <div class="quest-steps" id="questSteps"></div>
+    </div>
+
+    <!-- 3. ЦЕНТРАЛЬНАЯ СЦЕНА С КРУЖКОМ (ORB) -->
+    <div class="center-stage">
+        <div class="orb-container" id="orbContainer">
+            <div class="orb-ring-outer"></div>
+            <div class="orb-ring-inner"></div>
+            <div class="orb-core" id="orbCore">
+                <span class="orb-icon" id="orbIcon">🎙</span>
+                <span id="orbLabel">SPEAK EN</span>
+            </div>
+        </div>
+
+        <div class="status-line" id="statusLine">Нажми 1 раз или удерживай кружок (либо Пробел)</div>
+
+        <div class="sub-orb-controls">
+            <button class="sub-pill" id="ruAskBtn" onclick="toggleRussianQuestion()">🇷🇺 Спросить по-русски</button>
+            <button class="sub-pill" onclick="toggleQuickInput()">⌨️ Текст</button>
+        </div>
+    </div>
+
+    <!-- Быстрый текстовый ввод (для тихого режима или браузеров без микрофона) -->
+    <div class="quick-input-bar" id="quickInputBar">
+        <input type="text" id="quickTextInput" placeholder="Напиши по-английски или задай вопрос по-русски..." onkeydown="if(event.key==='Enter') submitQuickText()">
+        <button onclick="submitQuickText()">➔</button>
+    </div>
+
+    <!-- 4. НИЖНЯЯ СОБРАННАЯ КАПСУЛА (DOCK) -->
+    <div class="bottom-dock">
+        <!-- Баннер разбора ошибки или Stealth Upgrade -->
+        <div class="dock-correction" id="dockCorrection">
+            <div class="corr-text" id="corrText"></div>
+            <button class="corr-speak-btn" onclick="speakRussianTip()" title="Озвучить пояснение">🔊 RU</button>
+        </div>
+
+        <!-- Главная английская фраза Анны + кнопки инструментов -->
+        <div class="dock-main">
+            <div class="dock-en" id="enPhrase" onclick="speakEnglish(currentEnReply, 0.96)" title="Нажми, чтобы прослушать">
+                Hi! Welcome to our London cafe. What can I get for you today?
+            </div>
+            <div class="dock-tools">
+                <button class="tool-btn" onclick="speakEnglish(currentEnReply, 0.96)" title="Озвучить">🔊</button>
+                <button class="tool-btn" onclick="speakEnglish(currentEnReply, 0.72)" title="Медленно (0.72x)">🐢</button>
+                <button class="tool-btn" id="pronCheckBtn" onclick="startPronunciationCheck()" title="Проверить моё произношение этой фразы">🎯</button>
+                <button class="tool-btn" onclick="saveCurrentToVault()" title="Сохранить фразу в словарь">⭐</button>
+            </div>
+        </div>
+
+        <!-- Транскрипция и перевод (адаптируются под уровень A1-C2) -->
+        <div class="dock-sub" id="dockSub">
+            <span class="dock-tr" id="trText">[хай! уэлкам ту ауэр ландан кэфэй. уот кэн ай гет фо ю тудэй?]</span>
+            <span id="subSep">·</span>
+            <span id="ruText">Привет! Добро пожаловать в наше лондонское кафе. Что я могу предложить тебе сегодня?</span>
+        </div>
+
+        <!-- Подсказки для ответа -->
+        <div class="dock-hints" id="hintsBar"></div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: СЛОВАРЬ И ОШИБКИ (VOCABULARY VAULT) -->
+    <div class="drawer" id="vaultDrawer">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <span class="drawer-title">📚 Личный словарь (Vault)</span>
+                <button class="pill-btn" onclick="closeDrawer('vaultDrawer')">Закрыть</button>
+            </div>
+
+            <div class="field-desc">
+                Сюда автоматически сохраняются исправленные ошибки и фразы, отмеченные звёздочкой ⭐. Нажми на тренажёр, чтобы размяться перед разговором:
+            </div>
+
+            <!-- Мини-тренажёр карточек -->
+            <div class="flashcard-box" id="flashcardBox" onclick="flipFlashcard()">
+                <div style="font-size: 11px; color: #f472b6; font-weight: 600;">⚡ БЫСТРАЯ РАЗМИНКА (НАЖМИ, ЧТОБЫ ПЕРЕВЕРНУТЬ)</div>
+                <div id="fcMainText" style="font-size: 16px; font-weight: 700; color: #fff;">Добавь первую фразу кнопкой ⭐</div>
+                <div id="fcSubText" style="font-size: 12.5px; color: #d4d4d8;">или просто начни говорить с Анной</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="action-btn" onclick="nextFlashcard()">🔄 Следующая карточка</button>
+                <button class="action-btn" onclick="speakFlashcard()">🔊 Произнести</button>
+            </div>
+
+            <div class="field-label" style="margin-top: 6px;">Сохранённые фразы и разборы:</div>
+            <div class="vault-list" id="vaultList"></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: НАГРАДЫ И ПРОГРЕСС -->
+    <div class="drawer" id="rewardsDrawer">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <span class="drawer-title">🏆 Награды и Достижения</span>
+                <button class="pill-btn" onclick="closeDrawer('rewardsDrawer')">Закрыть</button>
+            </div>
+            <div class="field-card">
+                <div class="field-label">Твой прогресс</div>
+                <div style="font-size: 13px; color: #fff;">Опыт: <b id="statXp">0</b> XP · Реплик за всё время: <b id="statTalks">0</b></div>
+            </div>
+            <div class="badges-grid" id="badgesGrid"></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: МЕНЮ И НАСТРОЙКИ -->
+    <div class="drawer" id="menuDrawer">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <span class="drawer-title">⚙️ Настройки и Сценарии</span>
+                <button class="pill-btn" onclick="closeDrawer('menuDrawer')">Закрыть</button>
+            </div>
+
+            <div class="field-card">
+                <div class="field-label">1. Уровень английского (CEFR Adaptive Engine)</div>
+                <select id="levelSelect" onchange="changeLevelFromMenu()">
+                    <option value="A1-A2">🟢 A1–A2 (Support: простые фразы, транскрипция, перевод и правила на RU)</option>
+                    <option value="B1-B2">🔵 B1–B2 (Immersion: живой разговор на EN + мягкий рефрейминг ошибок)</option>
+                    <option value="C1-C2">🟣 C1–C2 (Mastery / Business: идиомы, переговоры, сложные дискуссии)</option>
+                </select>
+            </div>
+
+            <div class="field-card">
+                <div class="field-label">2. Ролевой сценарий (Roleplay Scenario)</div>
+                <select id="questSelect" onchange="changeQuestFromMenu()">
+                    <option value="cafe">☕ Coffee & Small Talk in London (В кофейне)</option>
+                    <option value="interview">💼 IT & Tech Job Interview (Собеседование)</option>
+                    <option value="airport">✈️ Lost Luggage at Heathrow (В аэропорту)</option>
+                    <option value="hotel">🏨 Hotel Check-in (Заселение в отель)</option>
+                    <option value="free">💬 Free Talk (Свободный диалог на любую тему)</option>
+                </select>
+            </div>
+
+            <div class="field-card">
+                <div class="field-label">3. Режим исправления ошибок</div>
+                <select id="stealthSelect" onchange="changeStealthFromMenu()">
+                    <option value="stealth">🕵️ Stealth Mode (Не прерывать речь, показывать апгрейд фразы снизу)</option>
+                    <option value="tutor">👩‍🏫 Tutor Mode (Подробный разбор каждой грамматической ошибки)</option>
+                </select>
+            </div>
+
+            <div class="field-card">
+                <div class="field-label">4. Голос Анны (Английский и Русский)</div>
+                <div class="field-desc">Автоматически выбираются живые нейро-голоса (Natural / Google / Samantha):</div>
+                <select id="enVoiceSelect" onchange="speakEnglish(currentEnReply, 0.96)"></select>
+                <select id="ruVoiceSelect" style="margin-top: 6px;"></select>
+            </div>
+
+            <div class="field-card">
+                <div class="field-label">5. 🧠 Долгосрочная память Анны (Long-term Context)</div>
+                <div class="field-desc">Анна запоминает твоё имя, интересы и цели между уроками:</div>
+                <textarea id="memoryInput" rows="2" placeholder="Например: Меня зовут Алекс, интересуюсь IT, путешествиями и кино..." onchange="saveMemoryManual()"></textarea>
+            </div>
+
+            <button class="action-btn primary" onclick="downloadStandaloneHTML()">📥 Скачать готовый index.html для Telegram</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // =========================================================================
+        // 1. БАЗА РОЛЕВЫХ СЦЕНАРИЕВ И НАГРАД (MASTER BLUEPRINT)
+        // =========================================================================
+        const QUESTS = {
+            cafe: {
+                title: "☕ Кофейня в Лондоне",
+                badge: "b_cafe",
+                prompt: "Scenario: You are a friendly barista in a cozy London cafe. The user is ordering a drink/pastry and making small talk.",
+                opener: {
+                    en: "Hi! Welcome to our London cafe. What can I get for you today?",
+                    tr: "[хай! уэлкам ту ауэр ландан кэфэй. уот кэн ай гет фо ю тудэй?]",
+                    ru: "Привет! Добро пожаловать в наше лондонское кафе. Что я могу предложить тебе сегодня?",
+                    hints: [
+                        "Can I have a latte, please? — Можно мне латте?",
+                        "I would like a coffee and a croissant — Я бы хотел кофе и круассан",
+                        "How much is it? — Сколько это стоит?"
+                    ]
+                },
+                steps: [
+                    { id: "c1", label: "Заказать напиток", kw: ["coffee", "latte", "tea", "cappuccino", "water", "please", "can i", "would like", "want"] },
+                    { id: "c2", label: "Small talk", kw: ["weather", "day", "morning", "good", "nice", "london", "work", "busy"] },
+                    { id: "c3", label: "Спросить цену / Спасибо", kw: ["how much", "cost", "price", "card", "pay", "thank", "thanks"] }
+                ]
+            },
+            interview: {
+                title: "💼 Собеседование в компанию",
+                badge: "b_interview",
+                prompt: "Scenario: You are an encouraging international HR/Hiring Manager conducting a job interview in English.",
+                opener: {
+                    en: "Welcome! Thanks for joining the interview today. Could you tell me a little bit about yourself and your background?",
+                    tr: "[уэлкам! сэнкс фо джойнин зэ интервью тудэй. куд ю тэл ми э литл бит эбаут ёсэлф?]",
+                    ru: "Добро пожаловать! Расскажите немного о себе и своём опыте.",
+                    hints: [
+                        "I work as a developer / designer — Я работаю...",
+                        "I have three years of experience — У меня 3 года опыта",
+                        "I enjoy solving complex problems — Мне нравится решать сложные задачи"
+                    ]
+                },
+                steps: [
+                    { id: "i1", label: "Рассказать об опыте", kw: ["work", "experience", "study", "years", "job", "project", "developer", "manager", "background"] },
+                    { id: "i2", label: "Назвать сильную сторону", kw: ["strong", "strength", "skill", "team", "fast", "learn", "problem", "good at"] },
+                    { id: "i3", label: "Задать вопрос HR", kw: ["question", "team", "culture", "remote", "next step", "company", "what", "how"] }
+                ]
+            },
+            airport: {
+                title: "✈️ Багаж в аэропорту",
+                badge: "b_airport",
+                prompt: "Scenario: You are a helpful airline officer at London Heathrow Baggage Claim. The user's suitcase didn't arrive.",
+                opener: {
+                    en: "Hello! Welcome to Heathrow Baggage Service. How can I help you today?",
+                    tr: "[хэллоу! уэлкам ту хитроу бэгидж сёрвис. хау кэн ай хэлп ю тудэй?]",
+                    ru: "Здравствуйте! Служба розыска багажа Хитроу. Чем могу вам помочь?",
+                    hints: [
+                        "My luggage is missing — Мой багаж пропал",
+                        "It is a big black suitcase — Это большой чёрный чемодан",
+                        "Here is my boarding pass and phone — Вот мой посадочный и телефон"
+                    ]
+                },
+                steps: [
+                    { id: "a1", label: "Сообщить о пропаже", kw: ["bag", "luggage", "suitcase", "lost", "missing", "arrive", "find"] },
+                    { id: "a2", label: "Описать чемодан", kw: ["black", "blue", "red", "big", "small", "color", "wheels", "leather"] },
+                    { id: "a3", label: "Оставить контакты", kw: ["hotel", "phone", "number", "address", "deliver", "call"] }
+                ]
+            },
+            hotel: {
+                title: "🏨 Заселение в отель",
+                badge: "b_hotel",
+                prompt: "Scenario: You are a polite receptionist at a boutique hotel. The user is checking in.",
+                opener: {
+                    en: "Good evening! Welcome to the Grand Hotel. Do you have a reservation with us?",
+                    tr: "[гуд ивнин! уэлкам ту зэ гранд хоутэл. ду ю хэв э рэзэрвэйшн уиз ас?]",
+                    ru: "Добрый вечер! Добро пожаловать в Гранд Отель. У вас есть бронь?",
+                    hints: [
+                        "Yes, I have a reservation under my name — Да, у меня бронь на моё имя",
+                        "What time is breakfast served? — Во сколько подают завтрак?",
+                        "What is the Wi-Fi password? — Какой пароль от Wi-Fi?"
+                    ]
+                },
+                steps: [
+                    { id: "h1", label: "Подтвердить бронь", kw: ["reservation", "room", "booked", "name", "check in", "night"] },
+                    { id: "h2", label: "Узнать про завтрак", kw: ["breakfast", "morning", "time", "restaurant", "eat", "food"] },
+                    { id: "h3", label: "Спросить про Wi-Fi", kw: ["wifi", "wi-fi", "internet", "password", "key"] }
+                ]
+            },
+            free: {
+                title: "💬 Свободный разговор",
+                badge: "b_free",
+                prompt: "Scenario: Open, engaging conversation tailored to the user's interests and level.",
+                opener: {
+                    en: "Hey there! I'm Anna. We can talk about anything you like today — how is your day going?",
+                    tr: "[хэй зэр! айм анна. хау из ё дэй гоуин?]",
+                    ru: "Привет! Я Анна. Сегодня можем поговорить о чём угодно — как проходит твой день?",
+                    hints: [
+                        "My day is going great, thanks! — Мой день проходит отлично!",
+                        "I'm a bit tired after work — Я немного устал после работы",
+                        "Let's talk about movies or travel — Давай поговорим о кино или путешествиях"
+                    ]
+                },
+                steps: []
+            }
+        };
+
+        const BADGES = [
+            { id: "b_first", icon: "🎙", title: "Первый шаг", desc: "Первая голосовая реплика" },
+            { id: "b_pron", icon: "💎", title: "Чистый акцент", desc: "Произношение 90%+" },
+            { id: "b_cafe", icon: "☕", title: "Лондонский кофе", desc: "Пройден квест в кофейне" },
+            { id: "b_interview", icon: "💼", title: "Оффер получен", desc: "Пройдено собеседование" },
+            { id: "b_airport", icon: "✈️", title: "Багаж найден", desc: "Пройден квест в аэропорту" },
+            { id: "b_hotel", icon: "🏨", title: "VIP Гость", desc: "Заселение в отель" },
+            { id: "b_vault", icon: "📚", title: "Коллекционер", desc: "5 фраз в словаре" },
+            { id: "b_streak", icon: "🔥", title: "В потоке", desc: "10 реплик за практику" }
+        ];
+
+        // =========================================================================
+        // 2. СОСТОЯНИЕ ПОЛЬЗОВАТЕЛЯ (LOCALSTORAGE PERSISTENCE)
+        // =========================================================================
+        const defaultState = {
+            xp: 0,
+            talks: 0,
+            level: "A1-A2",
+            stealth: true,
+            quest: "cafe",
+            badges: [],
+            memory: "",
+            vault: [
+                {
+                    en: "Could I have a latte, please?",
+                    ru: "Можно мне латте, пожалуйста? (вежливая форма)",
+                    note: "Вместо 'Give me coffee' лучше использовать 'Could I have...'"
+                },
+                {
+                    en: "I have been working in IT for two years.",
+                    ru: "Я работаю в IT уже два года.",
+                    note: "Для опыта до текущего момента отлично звучит Present Perfect Continuous"
+                }
+            ]
+        };
+
+        let appState = Object.assign({}, defaultState, JSON.parse(localStorage.getItem('anna_universal_v1') || '{}'));
+        let questStepsDone = {};
+        let currentEnReply = QUESTS[appState.quest]?.opener.en || QUESTS.cafe.opener.en;
+        let currentRuTip = "";
+        let flashcardIndex = 0;
+        let flashcardFlipped = false;
+
+        function saveAppState() {
+            localStorage.setItem('anna_universal_v1', JSON.stringify(appState));
+            document.getElementById('xpCount').innerText = appState.xp;
+            document.getElementById('vaultCount').innerText = appState.vault.length;
+            document.getElementById('statXp').innerText = appState.xp;
+            document.getElementById('statTalks').innerText = appState.talks;
+            document.getElementById('levelPill').innerText = appState.level;
+            const sp = document.getElementById('stealthPill');
+            sp.classList.toggle('active', appState.stealth);
+            sp.innerText = appState.stealth ? '🕵️ Stealth' : '👩‍🏫 Tutor';
+            document.getElementById('levelSelect').value = appState.level;
+            document.getElementById('questSelect').value = appState.quest;
+            document.getElementById('stealthSelect').value = appState.stealth ? 'stealth' : 'tutor';
+            document.getElementById('memoryInput').value = appState.memory || '';
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3100);
+        }
+
+        function unlockBadge(badgeId) {
+            if (!appState.badges.includes(badgeId)) {
+                appState.badges.push(badgeId);
+                appState.xp += 50;
+                saveAppState();
+                const b = BADGES.find(x => x.id === badgeId);
+                if (b) showToast(`${b.icon} Награда: ${b.title} (+50 XP)`);
+            }
+        }
+
+        // =========================================================================
+        // 3. НАДЁЖНЫЙ АУДИОДВИЖОК (TTS FIX ДЛЯ МОБИЛЬНЫХ И ПК)
+        // =========================================================================
+        let voicesList = [];
+        window._activeUtterance = null; // Защита от Garbage Collector в мобильном WebView
+        let speechWatchdog = null;
+        let audioUnlocked = false;
+
+        function scoreVoiceQuality(v, langPrefix) {
+            if (!v.lang.toLowerCase().startsWith(langPrefix)) return -999;
+            let score = 10;
+            const n = v.name;
+            if (n.includes('Natural') || n.includes('Online')) score += 120;
+            if (n.includes('Google')) score += 90;
+            if (n.includes('Aria') || n.includes('Jenny') || n.includes('Sonia') || n.includes('Ava') || n.includes('Svetlana') || n.includes('Dariya')) score += 75;
+            if (n.includes('Samantha') || n.includes('Victoria') || n.includes('Karen') || n.includes('Milena') || n.includes('Katya')) score += 50;
+            if (n.includes('Desktop') || n.includes('Zira') || n.includes('David') || n.includes('Irina') || n.includes('Pavel') || n.includes('Mark')) score -= 60;
+            return score;
+        }
+
+        function loadSystemVoices() {
+            if (!('speechSynthesis' in window)) return;
+            voicesList = window.speechSynthesis.getVoices();
+            if (!voicesList.length) return;
+
+            const enSel = document.getElementById('enVoiceSelect');
+            const ruSel = document.getElementById('ruVoiceSelect');
+            const prevEn = enSel.value;
+            const prevRu = ruSel.value;
+
+            const enSorted = voicesList
+                .filter(v => v.lang.toLowerCase().startsWith('en'))
+                .sort((a, b) => scoreVoiceQuality(b, 'en') - scoreVoiceQuality(a, 'en'));
+            const ruSorted = voicesList
+                .filter(v => v.lang.toLowerCase().startsWith('ru'))
+                .sort((a, b) => scoreVoiceQuality(b, 'ru') - scoreVoiceQuality(a, 'ru'));
+
+            enSel.innerHTML = enSorted.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+            ruSel.innerHTML = ruSorted.map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join('');
+
+            if (prevEn && enSorted.some(v => v.name === prevEn)) enSel.value = prevEn;
+            if (prevRu && ruSorted.some(v => v.name === prevRu)) ruSel.value = prevRu;
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadSystemVoices;
+            setTimeout(loadSystemVoices, 200);
+        }
+
+        function pickBestVoice(langPrefix) {
+            if (!voicesList.length && 'speechSynthesis' in window) {
+                voicesList = window.speechSynthesis.getVoices();
+            }
+            const selId = langPrefix === 'en' ? 'enVoiceSelect' : 'ruVoiceSelect';
+            const selectedName = document.getElementById(selId)?.value;
+            if (selectedName) {
+                const match = voicesList.find(v => v.name === selectedName);
+                if (match) return match;
+            }
+            const sorted = voicesList
+                .filter(v => v.lang.toLowerCase().startsWith(langPrefix))
+                .sort((a, b) => scoreVoiceQuality(b, langPrefix) - scoreVoiceQuality(a, langPrefix));
+            return sorted[0] || null;
+        }
+
+        function unlockMobileTTS() {
+            if (audioUnlocked || !('speechSynthesis' in window)) return;
+            try {
+                const silent = new SpeechSynthesisUtterance('');
+                silent.volume = 0;
+                window.speechSynthesis.speak(silent);
+                audioUnlocked = true;
+            } catch (e) {}
+        }
+
+        function setOrbState(mode, statusMsg) {
+            const orb = document.getElementById('orbContainer');
+            const icon = document.getElementById('orbIcon');
+            const label = document.getElementById('orbLabel');
+            const st = document.getElementById('statusLine');
+
+            orb.className = 'orb-container ' + (mode || '');
+            if (mode === 'listening') {
+                icon.innerText = '🎙';
+                label.innerText = 'LISTENING';
+                st.className = 'status-line live';
+            } else if (mode === 'listening-ru') {
+                icon.innerText = '🇷🇺';
+                label.innerText = 'ВОПРОС RU';
+                st.className = 'status-line live';
+            } else if (mode === 'pronounce') {
+                icon.innerText = '🎯';
+                label.innerText = 'REPEAT EN';
+                st.className = 'status-line live';
+            } else if (mode === 'thinking') {
+                icon.innerText = '✨';
+                label.innerText = 'THINKING';
+                st.className = 'status-line';
+            } else if (mode === 'speaking') {
+                icon.innerText = '🔊';
+                label.innerText = 'ANNA';
+                st.className = 'status-line';
+            } else {
+                icon.innerText = '🎙';
+                label.innerText = 'SPEAK EN';
+                st.className = 'status-line';
+            }
+
+            if (statusMsg) st.innerText = statusMsg;
+        }
+
+        function speakEnglish(text, customRate) {
+            if (!('speechSynthesis' in window) || !text) {
+                setOrbState('', 'Нажми 1 раз или удерживай кружок (либо Пробел)');
+                return;
+            }
+            if (speechWatchdog) clearTimeout(speechWatchdog);
+            window.speechSynthesis.cancel();
+
+            // 65ms пауза после cancel() предотвращает зависание очереди в мобильном Telegram WebView
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(text);
+                window._activeUtterance = u; // Защита от удаления сборщиком мусора
+                const voice = pickBestVoice('en');
+                if (voice) {
+                    u.voice = voice;
+                    u.lang = voice.lang;
+                } else {
+                    u.lang = 'en-US';
+                }
+
+                const defaultSpeed = appState.level === 'A1-A2' ? 0.91 : 0.98;
+                u.rate = customRate || defaultSpeed;
+                u.pitch = 1.0;
+
+                u.onstart = () => {
+                    setOrbState('speaking', 'Анна говорит по-английски...');
+                };
+                u.onend = () => {
+                    if (speechWatchdog) clearTimeout(speechWatchdog);
+                    setOrbState('', 'Твоя очередь: нажми или удерживай кружок');
+                };
+                u.onerror = () => {
+                    if (speechWatchdog) clearTimeout(speechWatchdog);
+                    setOrbState('', 'Твоя очередь: нажми или удерживай кружок');
+                };
+
+                // Сторожевой таймер на случай, если мобильный браузер не вызовет onend
+                const estimatedMs = Math.max(2500, text.length * 95);
+                speechWatchdog = setTimeout(() => {
+                    setOrbState('', 'Твоя очередь: нажми или удерживай кружок');
+                }, estimatedMs);
+
+                window.speechSynthesis.speak(u);
+            }, 65);
+        }
+
+        function speakRussianTip() {
+            if (!('speechSynthesis' in window) || !currentRuTip) return;
+            if (speechWatchdog) clearTimeout(speechWatchdog);
+            window.speechSynthesis.cancel();
+
+            setTimeout(() => {
+                const u = new SpeechSynthesisUtterance(currentRuTip);
+                window._activeUtterance = u;
+                const voice = pickBestVoice('ru');
+                if (voice) {
+                    u.voice = voice;
+                    u.lang = voice.lang;
+                } else {
+                    u.lang = 'ru-RU';
+                }
+                u.rate = 1.02;
+                u.pitch = 1.0;
+                u.onstart = () => setOrbState('speaking', 'Анна озвучивает разбор...');
+                u.onend = () => setOrbState('', 'Нажми или удерживай кружок');
+                u.onerror = () => setOrbState('', 'Нажми или удерживай кружок');
+                window.speechSynthesis.speak(u);
+            }, 65);
+        }
+
+        // =========================================================================
+        // 4. ГИБРИДНЫЙ МИКРОФОН: HOLD-TO-TALK + TAP-TO-TALK (БЕЗ КОНФЛИКТА ПОТОКОВ)
+        // =========================================================================
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let micActive = false;
+        let micMode = 'en'; // 'en' | 'ru' | 'pronounce'
+        let pressStartTime = 0;
+        let isHoldGesture = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const chunk = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += chunk + ' ';
+                    } else {
+                        interim += chunk;
+                    }
+                }
+                interimTranscript = interim;
+                const combined = (finalTranscript + interimTranscript).trim();
+                if (combined) {
+                    const st = document.getElementById('statusLine');
+                    st.className = 'status-line live';
+                    st.innerText = `«${combined}»`;
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    micActive = false;
+                    setOrbState('', '⚠️ Разреши доступ к микрофону в адресной строке браузера');
+                }
+            };
+
+            recognition.onend = () => {
+                // Если микрофон был выключен пользователем или браузер сам завершил фразу в Tap-to-Talk
+                if (micActive && !isHoldGesture) {
+                    finishMicCapture();
+                }
+            };
+        } else {
+            setTimeout(() => {
+                setOrbState('', 'Голосовой ввод недоступен в этом браузере — открой поле «⌨️ Текст»');
+                document.getElementById('quickInputBar').classList.add('show');
+            }, 400);
+        }
+
+        function startMicCapture(mode = 'en') {
+            unlockMobileTTS();
+            if (!recognition) {
+                document.getElementById('quickInputBar').classList.add('show');
+                document.getElementById('quickTextInput').focus();
+                return;
+            }
+            window.speechSynthesis.cancel();
+            micMode = mode;
+            micActive = true;
+            finalTranscript = '';
+            interimTranscript = '';
+
+            recognition.lang = (mode === 'ru') ? 'ru-RU' : 'en-US';
+
+            if (mode === 'ru') {
+                document.getElementById('ruAskBtn').classList.add('active-ru');
+                setOrbState('listening-ru', '🇷🇺 Спрашивай по-русски... (нажми кружок, когда закончишь)');
+            } else if (mode === 'pronounce') {
+                setOrbState('pronounce', `🎯 Прочитай вслух: "${currentEnReply}"`);
+            } else {
+                setOrbState('listening', '🎙 Говори по-английски... (отпусти или нажми снова для отправки)');
+            }
+
+            try {
+                recognition.start();
+            } catch (e) {}
+        }
+
+        function finishMicCapture() {
+            if (!micActive) return;
+            micActive = false;
+            isHoldGesture = false;
+            document.getElementById('ruAskBtn').classList.remove('active-ru');
+            document.getElementById('pronCheckBtn').classList.remove('active');
+
+            setTimeout(() => {
+                if (recognition) {
+                    try { recognition.stop(); } catch (e) {}
+                }
+                const spoken = (finalTranscript + ' ' + interimTranscript).trim();
+                if (!spoken) {
+                    setOrbState('', 'Не расслышала речь. Нажми кружок или удерживай Пробел');
+                    return;
+                }
+                if (micMode === 'pronounce') {
+                    gradePronunciation(spoken);
+                } else {
+                    sendToAnna(spoken, micMode);
+                }
+            }, 280);
+        }
+
+        // Обработка и удержания (Hold), и одиночного клика (Tap-to-Talk) на кружке
+        const orbEl = document.getElementById('orbContainer');
+
+        function onOrbPointerDown(e) {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            pressStartTime = Date.now();
+
+            if (!micActive) {
+                isHoldGesture = true;
+                startMicCapture(micMode === 'pronounce' ? 'pronounce' : 'en');
+            } else {
+                // Если микрофон уже был включён одиночным кликом (Tap-to-Talk), повторный клик завершает запись
+                isHoldGesture = false;
+                finishMicCapture();
+            }
+        }
+
+        function onOrbPointerUp() {
+            if (!micActive || !isHoldGesture) return;
+            const heldDuration = Date.now() - pressStartTime;
+            if (heldDuration >= 280) {
+                // Пользователь удерживал кнопку дольше 280 мс — это Hold-to-Talk, отправляем сразу при отпускании
+                finishMicCapture();
+            } else {
+                // Короткий клик (< 280 мс) — оставляем микрофон включённым в режиме Tap-to-Talk
+                isHoldGesture = false;
+                setOrbState(
+                    micMode === 'pronounce' ? 'pronounce' : (micMode === 'ru' ? 'listening-ru' : 'listening'),
+                    '🎙 Слушаю... (нажми на кружок ещё раз, когда закончишь фразу)'
+                );
+            }
+        }
+
+        orbEl.addEventListener('mousedown', onOrbPointerDown);
+        window.addEventListener('mouseup', onOrbPointerUp);
+        orbEl.addEventListener('touchstart', (e) => { e.preventDefault(); onOrbPointerDown(e); }, { passive: false });
+        window.addEventListener('touchend', onOrbPointerUp);
+
+        // Поддержка клавиши Пробел на ПК
+        window.addEventListener('keydown', (e) => {
+            const tag = document.activeElement?.tagName;
+            if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !micActive) {
+                e.preventDefault();
+                pressStartTime = Date.now();
+                isHoldGesture = true;
+                startMicCapture(micMode === 'pronounce' ? 'pronounce' : 'en');
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            const tag = document.activeElement?.tagName;
+            if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA' && micActive) {
+                e.preventDefault();
+                finishMicCapture();
+            }
+        });
+
+        function toggleRussianQuestion() {
+            if (micActive && micMode === 'ru') {
+                finishMicCapture();
+            } else {
+                isHoldGesture = false;
+                startMicCapture('ru');
+            }
+        }
+
+        // =========================================================================
+        // 5. ДВОЙНОЕ ИИ-ЯДРО: GEMINI 3 FLASH PREVIEW + POLLINATIONS FALLBACK
+        // =========================================================================
+        let conversationHistory = [];
+
+        function buildDynamicSystemPrompt() {
+            const q = QUESTS[appState.quest] || QUESTS.cafe;
+            const levelRules = {
+                "A1-A2": "User CEFR Level: A1-A2 (Beginner). Use short, clear, basic English sentences (present/past simple). Always provide Russian phonetic transcription in [square brackets] and Russian translation.",
+                "B1-B2": "User CEFR Level: B1-B2 (Intermediate). Speak natural conversational English. Use the Reformulating technique if they make a mistake. Transcription can be omitted or only for hard words.",
+                "C1-C2": "User CEFR Level: C1-C2 (Advanced/Business). Use idiomatic, nuanced, native-level English. Challenge the user with thoughtful follow-up questions and suggest executive/native phrasing upgrades."
+            }[appState.level];
+
+            const correctionStyle = appState.stealth
+                ? "STEALTH MODE IS ON: Do NOT scold or interrupt the conversation flow. In 'correction_or_upgrade', provide a brief, encouraging native phrasing upgrade in Russian (e.g., '✨ Как сказать ещё естественнее: «...» вместо «...»') ONLY if the user made a mistake or asked a question in Russian. If their English was great, leave 'correction_or_upgrade' empty."
+                : "TUTOR MODE IS ON: In 'correction_or_upgrade', clearly explain any grammar or vocabulary mistake in Russian and show the correct English sentence (`Better: ...`).";
+
+            const memoryContext = appState.memory ? `Known facts about the user (use naturally in conversation): ${appState.memory}` : "";
+
+            return `You are Anna, an empathetic, Silicon Valley-grade AI English Voice Tutor.
+STRICT BOUNDARY: Stay 100% focused on English practice, roleplay, and language coaching.
+${levelRules}
+${q.prompt}
+${correctionStyle}
+${memoryContext}
+
+Return STRICTLY a valid JSON object with these exact keys:
+{
+  "correction_or_upgrade": "Russian explanation of mistake, answer to user's Russian question, or Stealth native upgrade tip. Empty string if no mistake.",
+  "better_phrase_en": "If the user made a mistake in English, write the corrected English version of their sentence here (otherwise empty string).",
+  "reply_en": "Your spoken English response (1-2 natural sentences ending with an engaging question to keep the voice call flowing).",
+  "transcription_ru": "Russian phonetic transcription of reply_en in [brackets] (for A1-A2, or empty for B1-C2).",
+  "translation_ru": "Russian translation of reply_en.",
+  "hints": ["English reply idea 1 — Перевод", "English reply idea 2 — Перевод", "English reply idea 3 — Перевод"],
+  "learned_user_fact": "If the user mentioned their name, job, city, or hobby, summarize it briefly here (otherwise empty string)."
+}`;
+        }
+
+        async function callDualAIEngine(userText, langMode) {
+            const systemInstruction = buildDynamicSystemPrompt();
+            const userPrompt = langMode === 'ru'
+                ? `[Ученик задал вопрос по-русски]: "${userText}". Ответь на вопрос в поле correction_or_upgrade и предложи продолжить на английском в reply_en.`
+                : `User said: "${userText}"`;
+
+            conversationHistory.push({ role: "user", content: userPrompt });
+            if (conversationHistory.length > 10) conversationHistory.splice(0, 2);
+
+            // 1. Попытка через Gemini API (если исполняется в среде Canvas)
+            const apiKey = "";
+            if (typeof apiKey === "string" && apiKey.length > 0) {
+                try {
+                    const gemUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                    const gemPayload = {
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        contents: conversationHistory.map(m => ({
+                            role: m.role === 'assistant' ? 'model' : 'user',
+                            parts: [{ text: m.content }]
+                        })),
+                        generationConfig: { responseMimeType: "application/json" }
+                    };
+                    const r = await fetch(gemUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(gemPayload)
+                    });
+                    if (r.ok) {
+                        const j = await r.json();
+                        const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) return safeParseTutorJSON(text);
+                    }
+                } catch (e) {}
+            }
+
+            // 2. Автоматический бесплатный канал Pollinations OpenAI (для скачанного index.html в Telegram)
+            try {
+                const pollRes = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'openai',
+                        messages: [
+                            { role: "system", content: systemInstruction },
+                            ...conversationHistory
+                        ],
+                        response_format: { type: 'json_object' }
+                    })
+                });
+                if (pollRes.ok) {
+                    const pollJson = await pollRes.json();
+                    const content = pollJson?.choices?.[0]?.message?.content || "";
+                    if (content) return safeParseTutorJSON(content);
+                }
+            } catch (e) {}
+
+            // 3. Резервный GET-канал
+            const fallbackPrompt = encodeURIComponent(`${systemInstruction}\nUser: ${userText}\nRespond in JSON:`);
+            const resGet = await fetch(`https://text.pollinations.ai/${fallbackPrompt}`);
+            const rawGet = await resGet.text();
+            return safeParseTutorJSON(rawGet);
+        }
+
+        function safeParseTutorJSON(raw) {
+            try {
+                const match = raw.match(/\{[\s\S]*\}/);
+                if (match) return JSON.parse(match[0]);
+            } catch (e) {}
+            return {
+                correction_or_upgrade: "",
+                better_phrase_en: "",
+                reply_en: "That sounds really interesting! Could you tell me a bit more about that?",
+                transcription_ru: "[зэт саундз рили интрэстин! куд ю тэл ми э бит мор эбаут зэт?]",
+                translation_ru: "Звучит очень интересно! Можешь рассказать об этом чуть подробнее?",
+                hints: [
+                    "Sure, let me explain — Конечно, давай объясню",
+                    "For example... — Например...",
+                    "What do you think? — А что ты думаешь?"
+                ],
+                learned_user_fact: ""
+            };
+        }
+
+        async function sendToAnna(userText, langMode = 'en') {
+            setOrbState('thinking', `Ты: «${userText}» · Анна думает...`);
+
+            unlockBadge('b_first');
+            appState.talks += 1;
+            appState.xp += 10;
+            if (appState.talks >= 10) unlockBadge('b_streak');
+            evaluateQuestSteps(userText);
+            saveAppState();
+
+            try {
+                const data = await callDualAIEngine(userText, langMode);
+                conversationHistory.push({ role: "assistant", content: JSON.stringify(data) });
+
+                // Если Анна узнала новый факт о пользователе — сохраняем в долгосрочную память
+                if (data.learned_user_fact && data.learned_user_fact.trim().length > 2) {
+                    if (!appState.memory.includes(data.learned_user_fact)) {
+                        appState.memory = (appState.memory ? appState.memory + "; " : "") + data.learned_user_fact;
+                    }
+                }
+
+                // Если была исправлена ошибка — автоматически сохраняем в Vocabulary Vault
+                if (data.better_phrase_en && data.better_phrase_en.trim().length > 2) {
+                    addPhraseToVault(data.better_phrase_en, data.correction_or_upgrade || `Вместо: "${userText}"`, true);
+                }
+
+                saveAppState();
+                renderBottomDock(data);
+
+                // Озвучиваем живой английский ответ без переключения языка посередине
+                speakEnglish(currentEnReply);
+            } catch (err) {
+                setOrbState('', 'Сеть перегружена. Нажми на кружок и повтори ещё раз.');
+            }
+        }
+
+        function renderBottomDock(data) {
+            const corrBox = document.getElementById('dockCorrection');
+            const corrText = document.getElementById('corrText');
+
+            if (data.correction_or_upgrade && data.correction_or_upgrade.trim()) {
+                currentRuTip = data.correction_or_upgrade.trim();
+                const prefix = appState.stealth ? "✨ " : "💡 ";
+                const better = data.better_phrase_en ? ` ➔ <b>${data.better_phrase_en}</b>` : "";
+                corrText.innerHTML = `${prefix}${currentRuTip}${better}`;
+                corrBox.classList.add('show');
+            } else {
+                currentRuTip = "";
+                corrBox.classList.remove('show');
+            }
+
+            currentEnReply = data.reply_en || "Great! What would you like to talk about next?";
+            document.getElementById('enPhrase').innerText = currentEnReply;
+
+            const trEl = document.getElementById('trText');
+            const ruEl = document.getElementById('ruText');
+            const sepEl = document.getElementById('subSep');
+
+            // Адаптация подписи под уровень A1–A2 / B1–B2 / C1–C2
+            if (appState.level === 'A1-A2') {
+                trEl.style.display = 'inline';
+                sepEl.style.display = 'inline';
+                ruEl.style.display = 'inline';
+                trEl.innerText = data.transcription_ru || '';
+                ruEl.innerText = data.translation_ru || '';
+            } else if (appState.level === 'B1-B2') {
+                trEl.style.display = 'none';
+                sepEl.style.display = 'none';
+                ruEl.style.display = 'inline';
+                ruEl.innerText = data.translation_ru || '';
+            } else {
+                // На C1-C2 оставляем чистый английский (перевод по наведению)
+                trEl.style.display = 'none';
+                sepEl.style.display = 'none';
+                ruEl.style.display = 'inline';
+                ruEl.innerText = 'C1–C2 Mastery Mode · Нажми 🎯 для проверки акцента';
+            }
+
+            if (Array.isArray(data.hints) && data.hints.length) {
+                renderHints(data.hints);
+            }
+        }
+
+        function renderHints(hintsArray) {
+            const bar = document.getElementById('hintsBar');
+            bar.innerHTML = hintsArray.map(h => {
+                const enClean = h.split('—')[0].trim().replace(/'/g, "\\'");
+                return `<span class="hint-chip" onclick="useHint('${enClean}')">${h}</span>`;
+            }).join('');
+        }
+
+        function useHint(enText) {
+            currentEnReply = enText;
+            document.getElementById('enPhrase').innerText = enText;
+            speakEnglish(enText, 0.92);
+        }
+
+        // =========================================================================
+        // 6. ПОСЛОВНАЯ ПРОВЕРКА ПРОИЗНОШЕНИЯ (WORD-BY-WORD PRONUNCIATION)
+        // =========================================================================
+        function startPronunciationCheck() {
+            const btn = document.getElementById('pronCheckBtn');
+            if (micActive && micMode === 'pronounce') {
+                finishMicCapture();
+                return;
+            }
+            btn.classList.add('active');
+            isHoldGesture = false;
+            startMicCapture('pronounce');
+        }
+
+        function gradePronunciation(spokenText) {
+            const cleanWords = s => s.toLowerCase().replace(/[^a-z0-9\s']/g, '').trim().split(/\s+/);
+            const targetList = currentEnReply.trim().split(/\s+/);
+            const spokenList = cleanWords(spokenText);
+
+            let matched = 0;
+            const htmlWords = targetList.map(word => {
+                const wNorm = word.toLowerCase().replace(/[^a-z0-9']/g, '');
+                if (spokenList.includes(wNorm)) {
+                    matched++;
+                    return `<span class="word-ok">${word}</span>`;
+                }
+                return `<span class="word-fix">${word}</span>`;
+            }).join(' ');
+
+            document.getElementById('enPhrase').innerHTML = htmlWords;
+            const score = Math.round((matched / Math.max(1, targetList.length)) * 100);
+            appState.xp += 15;
+            if (score >= 90) unlockBadge('b_pron');
+            saveAppState();
+
+            setOrbState('', `🎯 Точность произношения: ${score}% (услышано: «${spokenText}»)`);
+        }
+
+        // =========================================================================
+        // 7. ЛИЧНЫЙ СЛОВАРЬ (VOCABULARY VAULT) И ТРЕНАЖЁР КАРТОЧЕК
+        // =========================================================================
+        function addPhraseToVault(en, noteOrRu, silent = false) {
+            if (!en) return;
+            const exists = appState.vault.some(item => item.en.toLowerCase() === en.toLowerCase());
+            if (exists) {
+                if (!silent) showToast('📚 Уже есть в твоём словаре');
+                return;
+            }
+            appState.vault.unshift({
+                en: en,
+                ru: document.getElementById('ruText').innerText || '',
+                note: noteOrRu || ''
+            });
+            if (appState.vault.length >= 5) unlockBadge('b_vault');
+            saveAppState();
+            renderVaultDrawer();
+            if (!silent) showToast('⭐ Сохранено в личный словарь (+10 XP)');
+        }
+
+        function saveCurrentToVault() {
+            appState.xp += 10;
+            addPhraseToVault(currentEnReply, currentRuTip || 'Из диалога с Анной', false);
+        }
+
+        function removeVaultItem(idx) {
+            appState.vault.splice(idx, 1);
+            saveAppState();
+            renderVaultDrawer();
+        }
+
+        function renderVaultDrawer() {
+            const listEl = document.getElementById('vaultList');
+            if (!appState.vault.length) {
+                listEl.innerHTML = `<div class="field-desc">Пока пусто. Нажми ⭐ на нижней панели во время разговора!</div>`;
+            } else {
+                listEl.innerHTML = appState.vault.map((item, idx) => `
+                    <div class="vault-item">
+                        <div style="flex:1; cursor:pointer;" onclick="speakEnglish('${item.en.replace(/'/g, "\\'")}', 0.92)">
+                            <div class="vault-item-en">🔊 ${item.en}</div>
+                            <div class="vault-item-sub">${item.note || item.ru}</div>
+                        </div>
+                        <button class="pill-btn" onclick="removeVaultItem(${idx})">✕</button>
+                    </div>
+                `).join('');
+            }
+            updateFlashcardUI();
+        }
+
+        function updateFlashcardUI() {
+            const mainEl = document.getElementById('fcMainText');
+            const subEl = document.getElementById('fcSubText');
+            if (!appState.vault.length) return;
+            if (flashcardIndex >= appState.vault.length) flashcardIndex = 0;
+            const card = appState.vault[flashcardIndex];
+            if (!flashcardFlipped) {
+                mainEl.innerText = card.en;
+                subEl.innerText = "Нажми, чтобы увидеть перевод / разбор";
+            } else {
+                mainEl.innerText = card.note || card.ru || "Практическая фраза";
+                subEl.innerText = card.en;
+            }
+        }
+
+        function flipFlashcard() {
+            flashcardFlipped = !flashcardFlipped;
+            updateFlashcardUI();
+        }
+
+        function nextFlashcard() {
+            if (!appState.vault.length) return;
+            flashcardIndex = (flashcardIndex + 1) % appState.vault.length;
+            flashcardFlipped = false;
+            updateFlashcardUI();
+        }
+
+        function speakFlashcard() {
+            if (!appState.vault.length) return;
+            const card = appState.vault[flashcardIndex];
+            speakEnglish(card.en, 0.92);
+        }
+
+        // =========================================================================
+        // 8. УПРАВЛЕНИЕ КВЕСТАМИ, УРОВНЯМИ И МЕНЮ
+        // =========================================================================
+        function renderQuestBar() {
+            const q = QUESTS[appState.quest] || QUESTS.cafe;
+            document.getElementById('questTitle').innerText = `${q.title} ▾`;
+            const stepsContainer = document.getElementById('questSteps');
+            if (!q.steps.length) {
+                stepsContainer.innerHTML = `<span class="q-step">Свободная тема</span>`;
+                return;
+            }
+            stepsContainer.innerHTML = q.steps.map(s => {
+                const done = questStepsDone[s.id];
+                return `<span class="q-step ${done ? 'done' : ''}">${done ? '✓' : '○'} ${s.label}</span>`;
+            }).join('');
+        }
+
+        function evaluateQuestSteps(userText) {
+            const q = QUESTS[appState.quest];
+            if (!q || !q.steps.length) return;
+            const lower = userText.toLowerCase();
+            let newlyDone = false;
+
+            q.steps.forEach(s => {
+                if (!questStepsDone[s.id] && s.kw.some(k => lower.includes(k))) {
+                    questStepsDone[s.id] = true;
+                    newlyDone = true;
+                    appState.xp += 25;
+                }
+            });
+
+            if (newlyDone) {
+                renderQuestBar();
+                if (q.steps.every(s => questStepsDone[s.id])) {
+                    unlockBadge(q.badge);
+                }
+            }
+        }
+
+        function cycleLevel() {
+            const order = ["A1-A2", "B1-B2", "C1-C2"];
+            const nextIdx = (order.indexOf(appState.level) + 1) % order.length;
+            appState.level = order[nextIdx];
+            saveAppState();
+            showToast(`Уровень переключён: ${appState.level}`);
+            renderBottomDock({
+                correction_or_upgrade: currentRuTip,
+                reply_en: currentEnReply,
+                transcription_ru: document.getElementById('trText').innerText,
+                translation_ru: document.getElementById('ruText').innerText,
+                hints: []
+            });
+        }
+
+        function toggleStealth() {
+            appState.stealth = !appState.stealth;
+            saveAppState();
+            showToast(appState.stealth ? "🕵️ Stealth Mode: мягкие апгрейды фраз" : "👩‍🏫 Tutor Mode: подробный разбор ошибок");
+        }
+
+        function changeLevelFromMenu() {
+            appState.level = document.getElementById('levelSelect').value;
+            saveAppState();
+        }
+
+        function changeStealthFromMenu() {
+            appState.stealth = document.getElementById('stealthSelect').value === 'stealth';
+            saveAppState();
+        }
+
+        function changeQuestFromMenu() {
+            appState.quest = document.getElementById('questSelect').value;
+            questStepsDone = {};
+            conversationHistory = [];
+            saveAppState();
+            applyQuestOpener();
+            closeDrawer('menuDrawer');
+        }
+
+        function applyQuestOpener() {
+            const q = QUESTS[appState.quest] || QUESTS.cafe;
+            currentEnReply = q.opener.en;
+            document.getElementById('enPhrase').innerText = q.opener.en;
+            document.getElementById('trText').innerText = q.opener.tr;
+            document.getElementById('ruText').innerText = q.opener.ru;
+            document.getElementById('dockCorrection').classList.remove('show');
+            renderHints(q.opener.hints);
+            renderQuestBar();
+        }
+
+        function saveMemoryManual() {
+            appState.memory = document.getElementById('memoryInput').value.trim();
+            saveAppState();
+            showToast('🧠 Память Анны обновлена');
+        }
+
+        function toggleQuickInput() {
+            const bar = document.getElementById('quickInputBar');
+            bar.classList.toggle('show');
+            if (bar.classList.contains('show')) {
+                document.getElementById('quickTextInput').focus();
+            }
+        }
+
+        function submitQuickText() {
+            const inp = document.getElementById('quickTextInput');
+            const val = inp.value.trim();
+            if (!val) return;
+            inp.value = '';
+            unlockMobileTTS();
+            const hasCyrillic = /[а-яё]/i.test(val);
+            sendToAnna(val, hasCyrillic ? 'ru' : 'en');
+        }
+
+        function renderBadgesDrawer() {
+            document.getElementById('badgesGrid').innerHTML = BADGES.map(b => {
+                const ok = appState.badges.includes(b.id);
+                return `
+                    <div class="badge-card ${ok ? 'unlocked' : ''}">
+                        <div style="font-size: 24px; margin-bottom: 4px;">${b.icon}</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #fff;">${b.title}</div>
+                        <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${b.desc}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openDrawer(id) {
+            if (id === 'vaultDrawer') renderVaultDrawer();
+            if (id === 'rewardsDrawer') renderBadgesDrawer();
+            document.getElementById(id).classList.add('open');
+        }
+
+        function closeDrawer(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        function downloadStandaloneHTML() {
+            const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'index.html';
+            a.click();
+        }
+
+        // Инициализация при старте
+        saveAppState();
+        applyQuestOpener();
+    </script>
+</body>
+</html>
